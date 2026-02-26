@@ -1,0 +1,48 @@
+$ next dev
+▲ Next.js 16.1.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.69:3000
+- Environments: .env.local
+
+✓ Starting...
+Creating turbopack project { dir: 'C:\\Users\\terri\\shipyard', testMode: true }
+✓ Ready in 1236ms
+○ Compiling /auth ...
+ GET /auth 200 in 3.9s (compile: 3.7s, render: 231ms)
+ GET / 200 in 1774ms (compile: 1707ms, render: 67ms)
+ GET / 200 in 34ms (compile: 4ms, render: 30ms)
+ GET /leaderboard 200 in 932ms (compile: 906ms, render: 26ms)
+ GET /leaderboard 200 in 89ms (compile: 4ms, render: 85ms)
+✓ Compiled in 1623ms
+ GET /leaderboard 200 in 400ms (compile: 134ms, render: 266ms)
+ GET /leaderboard 200 in 54ms (compile: 4ms, render: 50ms)
+ GET /hub 200 in 943ms (compile: 921ms, render: 22ms)
+ GET /projects 200 in 522ms (compile: 495ms, render: 27ms)
+ GET /auth 200 in 26ms (compile: 4ms, render: 22ms)
+✓ Compiled in 1388ms
+ GET /leaderboard 200 in 188ms (compile: 61ms, render: 127ms)
+ GET / 200 in 132ms (compile: 94ms, render: 38ms)
+ GET /leaderboard 200 in 20ms (compile: 3ms, render: 17ms)
+ GET /leaderboard 200 in 58ms (compile: 3ms, render: 55ms)
+ GET /leaderboard 200 in 45ms (compile: 3ms, render: 42ms)
+ GET /auth 200 in 19ms (compile: 3ms, render: 16ms)
+ GET / 200 in 23ms (compile: 3ms, render: 20ms)
+ GET /hub 200 in 21ms (compile: 3ms, render: 18ms)
+ GET / 200 in 183ms (compile: 3ms, render: 179ms)
+ GET /auth 200 in 49ms (compile: 5ms, render: 43ms)
+ GET /projects 200 in 125ms (compile: 5ms, render: 120ms)
+ GET /hub 200 in 136ms (compile: 8ms, render: 128ms)
+ GET /leaderboard 200 in 62ms (compile: 5ms, render: 57ms)
+ GET /projects/new 200 in 712ms (compile: 580ms, render: 133ms)
+✓ Compiled in 94ms
+ GET / 200 in 79ms (compile: 5ms, render: 74ms)
+ GET / 200 in 61ms (compile: 4ms, render: 57ms)
+ GET /leaderboard 200 in 19ms (compile: 3ms, render: 15ms)
+ GET /leaderboard 200 in 22ms (compile: 4ms, render: 19ms)
+ GET /leaderboard 200 in 22ms (compile: 3ms, render: 18ms)
+ GET /leaderboard 200 in 24ms (compile: 5ms, render: 19ms)
+✓ Compiled in 77ms
+ GET /leaderboard 200 in 71ms (compile: 9ms, render: 62ms)
+ GET /auth 200 in 153ms (compile: 124ms, render: 29ms)
+ GET /auth 200 in 171ms (compile: 3ms, render: 168ms)
+[?25h

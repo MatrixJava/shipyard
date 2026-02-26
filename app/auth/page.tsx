@@ -35,6 +35,25 @@ export default function AuthPage() {
   const [identity, setIdentity] = useState<SignedInIdentity | null>(null);
 
   useEffect(() => {
+    const recoverStuckLoadingState = () => {
+      setState((previous) => (previous === "loading" ? "idle" : previous));
+      setMessage((previous) =>
+        previous === "Opening provider sign-in..." || previous === "Redirecting to provider..."
+          ? defaultMessage
+          : previous
+      );
+    };
+
+    window.addEventListener("pageshow", recoverStuckLoadingState);
+    window.addEventListener("focus", recoverStuckLoadingState);
+
+    return () => {
+      window.removeEventListener("pageshow", recoverStuckLoadingState);
+      window.removeEventListener("focus", recoverStuckLoadingState);
+    };
+  }, [defaultMessage]);
+
+  useEffect(() => {
     if (!supabase) return;
 
     const syncUser = async () => {
@@ -152,18 +171,30 @@ export default function AuthPage() {
     if (!supabase) return;
 
     setState("loading");
+    setMessage("Opening provider sign-in...");
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: `${window.location.origin}/auth`,
+        skipBrowserRedirect: true,
       },
     });
 
     if (error) {
       setState("error");
       setMessage(error.message);
+      return;
     }
+
+    if (!data?.url) {
+      setState("error");
+      setMessage("Unable to open provider sign-in. Check provider settings and try again.");
+      return;
+    }
+
+    setMessage("Redirecting to provider...");
+    window.location.assign(data.url);
   };
 
   const handleSignOut = async () => {
