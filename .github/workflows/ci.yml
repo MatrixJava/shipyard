@@ -42,8 +42,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-bun-
 
-      - name: Install dependencies
+      - name: Install dependencies (strict lockfile)
+        if: github.actor != 'dependabot[bot]'
         run: bun install --frozen-lockfile
+
+      - name: Install dependencies (dependabot compatibility)
+        if: github.actor == 'dependabot[bot]'
+        run: bun install
 
       - name: Lint
         run: bun run lint

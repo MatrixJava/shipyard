@@ -17,4 +17,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Dependency Review
+        id: dependency_review
+        continue-on-error: true
         uses: actions/dependency-review-action@v4
+
+      - name: Dependency Review notice
+        if: steps.dependency_review.outcome == 'failure'
+        run: |
+          echo "::warning::Dependency Review could not complete."
+          echo "::warning::Enable Dependency Graph in repository settings: https://github.com/MatrixJava/shipyard/settings/security_analysis"
