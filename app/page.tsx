@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { QuickStarterPanel } from "@/components/home/QuickStarterPanel";
+import { TopReposPanel } from "@/components/home/TopReposPanel";
 
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-16 px-6 py-10 md:px-10 md:py-16">
       <section className="hero-panel rounded-3xl p-8 md:p-12">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">Shipyard.dev</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-300">Shipyard.dev</p>
         <h1 className="mt-4 max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
           The project platform for student builders and future engineers.
         </h1>
@@ -14,6 +16,9 @@ export default function Home() {
         <div className="mt-8 flex flex-wrap gap-3">
           <Link className="cta-primary" href="/hub">
             Open hub
+          </Link>
+          <Link className="cta-primary" href="/leaderboard">
+            Open leaderboard
           </Link>
           <Link className="cta-primary" href="/projects">
             Explore projects
@@ -45,6 +50,10 @@ export default function Home() {
         </article>
       </section>
 
+      <QuickStarterPanel />
+
+      <TopReposPanel />
+
       <section className="rounded-2xl border border-slate-700/80 bg-slate-900/50 p-6">
         <h2 className="text-2xl font-semibold">Phase 1 is live</h2>
         <p className="mt-2 text-slate-300">You can sign in, create a project, and browse public projects.</p>
@@ -62,6 +71,11 @@ export default function Home() {
           <li>
             <Link href="/projects/new" className="legacy-link">
               New Project
+            </Link>
+          </li>
+          <li>
+            <Link href="/leaderboard" className="legacy-link">
+              Leaderboard
             </Link>
           </li>
         </ul>

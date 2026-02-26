@@ -67,6 +67,21 @@ create table if not exists public.content_reports (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.open_source_commits (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references auth.users(id) on delete cascade,
+  repo_name text not null check (char_length(repo_name) between 2 and 120),
+  repo_url text,
+  commit_hash text not null check (char_length(commit_hash) between 7 and 64),
+  commit_url text,
+  commit_message text not null check (char_length(commit_message) between 5 and 500),
+  lines_added int not null default 0 check (lines_added >= 0 and lines_added <= 20000),
+  lines_deleted int not null default 0 check (lines_deleted >= 0 and lines_deleted <= 20000),
+  quality_score int not null default 5 check (quality_score between 1 and 10),
+  is_verified boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists idx_projects_created_at on public.projects (created_at desc);
 create index if not exists idx_projects_owner_id on public.projects (owner_id);
 create index if not exists idx_projects_visibility on public.projects (is_public, is_hidden, created_at desc);
@@ -79,6 +94,8 @@ create index if not exists idx_post_likes_post on public.post_likes (post_type, 
 create index if not exists idx_post_comments_post on public.post_comments (post_type, post_id, created_at asc);
 create index if not exists idx_content_reports_target on public.content_reports (target_type, target_id);
 create index if not exists idx_content_reports_status on public.content_reports (status, created_at desc);
+create index if not exists idx_open_source_commits_author on public.open_source_commits (author_id, created_at desc);
+create index if not exists idx_open_source_commits_created_at on public.open_source_commits (created_at desc);
 
 create or replace function public.is_admin(uid uuid)
 returns boolean
@@ -153,10 +170,12 @@ alter table public.ideas enable row level security;
 alter table public.post_likes enable row level security;
 alter table public.post_comments enable row level security;
 alter table public.content_reports enable row level security;
+alter table public.open_source_commits enable row level security;
 
 -- Projects
 
 drop policy if exists "Public projects are readable" on public.projects;
+drop policy if exists "Projects visible by policy" on public.projects;
 drop policy if exists "Users can insert own projects" on public.projects;
 drop policy if exists "Users can update own projects" on public.projects;
 drop policy if exists "Users can delete own projects" on public.projects;
@@ -427,6 +446,181 @@ create policy "Admins can update reports"
   for update
   using (public.is_admin(auth.uid()))
   with check (public.is_admin(auth.uid()));
+
+-- Open source commit ladder
+
+drop policy if exists "Open source commits are publicly readable" on public.open_source_commits;
+drop policy if exists "Users can insert own open source commits" on public.open_source_commits;
+drop policy if exists "Users can update own open source commits" on public.open_source_commits;
+drop policy if exists "Users can delete own open source commits" on public.open_source_commits;
+
+create policy "Open source commits are publicly readable"
+  on public.open_source_commits
+  for select
+  using (true);
+
+create policy "Users can insert own open source commits"
+  on public.open_source_commits
+  for insert
+  with check (
+    auth.uid() = author_id
+    and is_verified = false
+  );
+
+create policy "Users can update own open source commits"
+  on public.open_source_commits
+  for update
+  using (auth.uid() = author_id or public.is_admin(auth.uid()))
+  with check (
+    (
+      auth.uid() = author_id
+      and author_id = auth.uid()
+      and is_verified = false
+    )
+    or public.is_admin(auth.uid())
+  );
+
+create policy "Users can delete own open source commits"
+  on public.open_source_commits
+  for delete
+  using (auth.uid() = author_id or public.is_admin(auth.uid()));
+
+create or replace function public.commit_sr_points(
+  lines_added int,
+  lines_deleted int,
+  quality_score int,
+  is_verified boolean
+)
+returns int
+language sql
+immutable
+as $$
+  select
+    (greatest(quality_score, 1) * 12)
+    + least(((greatest(lines_added, 0) + greatest(lines_deleted, 0)) / 25), 40)
+    + (case when is_verified then 20 else 0 end);
+$$;
+
+create or replace function public.open_source_commit_feed(limit_count int default 40, offset_count int default 0)
+returns table (
+  id uuid,
+  author_id uuid,
+  repo_name text,
+  repo_url text,
+  commit_hash text,
+  commit_url text,
+  commit_message text,
+  lines_added int,
+  lines_deleted int,
+  quality_score int,
+  is_verified boolean,
+  created_at timestamptz,
+  sr_points int,
+  author_handle text,
+  author_display_name text,
+  author_avatar_url text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    c.id,
+    c.author_id,
+    c.repo_name,
+    c.repo_url,
+    c.commit_hash,
+    c.commit_url,
+    c.commit_message,
+    c.lines_added,
+    c.lines_deleted,
+    c.quality_score,
+    c.is_verified,
+    c.created_at,
+    public.commit_sr_points(c.lines_added, c.lines_deleted, c.quality_score, c.is_verified) as sr_points,
+    p.handle as author_handle,
+    p.display_name as author_display_name,
+    p.avatar_url as author_avatar_url
+  from public.open_source_commits c
+  left join public.profiles p on p.id = c.author_id
+  order by c.created_at desc
+  limit greatest(limit_count, 1)
+  offset greatest(offset_count, 0);
+$$;
+
+create or replace function public.open_source_leaderboard(limit_count int default 25)
+returns table (
+  rank_position int,
+  author_id uuid,
+  author_handle text,
+  author_display_name text,
+  author_avatar_url text,
+  total_sr int,
+  commit_count int,
+  avg_quality numeric,
+  verified_commit_count int,
+  last_commit_at timestamptz
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with scored as (
+    select
+      c.author_id,
+      c.quality_score,
+      c.is_verified,
+      c.created_at,
+      public.commit_sr_points(c.lines_added, c.lines_deleted, c.quality_score, c.is_verified) as sr_points
+    from public.open_source_commits c
+  ),
+  aggregated as (
+    select
+      s.author_id,
+      sum(s.sr_points)::int as total_sr,
+      count(*)::int as commit_count,
+      round(avg(s.quality_score)::numeric, 2) as avg_quality,
+      count(*) filter (where s.is_verified = true)::int as verified_commit_count,
+      max(s.created_at) as last_commit_at
+    from scored s
+    group by s.author_id
+  ),
+  ranked as (
+    select
+      dense_rank() over (order by a.total_sr desc, a.commit_count desc, a.last_commit_at asc)::int as rank_position,
+      a.author_id,
+      p.handle as author_handle,
+      p.display_name as author_display_name,
+      p.avatar_url as author_avatar_url,
+      a.total_sr,
+      a.commit_count,
+      a.avg_quality,
+      a.verified_commit_count,
+      a.last_commit_at
+    from aggregated a
+    left join public.profiles p on p.id = a.author_id
+  )
+  select
+    r.rank_position,
+    r.author_id,
+    r.author_handle,
+    r.author_display_name,
+    r.author_avatar_url,
+    r.total_sr,
+    r.commit_count,
+    r.avg_quality,
+    r.verified_commit_count,
+    r.last_commit_at
+  from ranked r
+  order by r.rank_position asc, r.last_commit_at asc
+  limit greatest(limit_count, 1);
+$$;
+
+grant execute on function public.commit_sr_points(int, int, int, boolean) to anon, authenticated;
+grant execute on function public.open_source_commit_feed(int, int) to anon, authenticated;
+grant execute on function public.open_source_leaderboard(int) to anon, authenticated;
 
 create or replace view public.hub_feed_base
 as

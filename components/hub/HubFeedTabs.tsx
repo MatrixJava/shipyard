@@ -7,12 +7,12 @@ type HubFeedTabsProps = {
 
 export function HubFeedTabs({ sort, onChange }: HubFeedTabsProps) {
   return (
-    <div className="inline-flex rounded-full border border-slate-600 bg-slate-900/70 p-1">
+    <div className="inline-flex rounded-full border border-sky-200/35 bg-sky-100/10 p-1">
       <button
         type="button"
         onClick={() => onChange("newest")}
         className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-          sort === "newest" ? "bg-cyan-400 text-slate-900" : "text-slate-300"
+          sort === "newest" ? "bg-sky-100 text-sky-900" : "text-sky-100"
         }`}
       >
         Newest
@@ -21,7 +21,7 @@ export function HubFeedTabs({ sort, onChange }: HubFeedTabsProps) {
         type="button"
         onClick={() => onChange("trending")}
         className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-          sort === "trending" ? "bg-cyan-400 text-slate-900" : "text-slate-300"
+          sort === "trending" ? "bg-sky-100 text-sky-900" : "text-sky-100"
         }`}
       >
         Trending

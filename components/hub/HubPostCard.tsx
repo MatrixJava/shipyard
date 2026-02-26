@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { HubFeedItem } from "@/lib/supabase/client";
 import { LikeButton } from "@/components/hub/LikeButton";
 import { CommentForm } from "@/components/hub/CommentForm";
@@ -15,7 +16,7 @@ type HubPostCardProps = {
   currentUserId: string | null;
   onToggleLike: () => void;
   onToggleComments: () => void;
-  onAddComment: (body: string) => Promise<void>;
+  onAddComment: (body: string) => Promise<boolean>;
   onDeleteComment: (commentId: string) => void;
   onReportPost: () => void;
   onReportComment: (commentId: string) => void;
@@ -37,19 +38,24 @@ export function HubPostCard({
   onReportPost,
   onReportComment,
 }: HubPostCardProps) {
+  const authorHref = item.author_handle ? `/leaderboard/${encodeURIComponent(item.author_handle)}` : null;
+
   return (
     <article className="feature-card">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">{item.post_type}</p>
-        <p className="text-xs text-slate-400">{new Date(item.created_at).toLocaleString()}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">{item.post_type}</p>
+        <p className="text-xs text-sky-100/65">{new Date(item.created_at).toLocaleString()}</p>
       </div>
-      <p className="mt-2 text-sm text-slate-400">
-        {item.author_display_name ?? item.author_handle ?? "builder"}
-        {item.author_handle ? ` • @${item.author_handle}` : ""}
-      </p>
-      <h2 className="mt-2 text-2xl font-semibold">{item.title}</h2>
-      <p className="mt-3 text-slate-300">{item.body}</p>
-      <p className="mt-3 text-sm text-slate-400">{item.status_or_difficulty}</p>
+      {authorHref ? (
+        <Link href={authorHref} className="mt-2 inline-block text-sm text-sky-100/85 hover:underline">
+          {item.author_display_name ?? item.author_handle ?? "builder"} • @{item.author_handle}
+        </Link>
+      ) : (
+        <p className="mt-2 text-sm text-sky-100/75">{item.author_display_name ?? item.author_handle ?? "builder"}</p>
+      )}
+      <h2 className="mt-2 text-2xl font-semibold text-sky-50">{item.title}</h2>
+      <p className="mt-3 text-sky-50/90">{item.body}</p>
+      <p className="mt-3 text-sm text-sky-100/70">{item.status_or_difficulty}</p>
       <TechStackPills stack={item.stack ?? []} />
 
       {(item.repo_url || item.demo_url) && (
@@ -72,23 +78,23 @@ export function HubPostCard({
         <button
           type="button"
           onClick={onToggleComments}
-          className="rounded-full border border-slate-500 px-3 py-1 text-sm font-semibold text-slate-200"
+          className="rounded-full border border-sky-200/40 bg-sky-100/8 px-3 py-1 text-sm font-semibold text-sky-100"
         >
           Comments ({item.comment_count})
         </button>
         <button
           type="button"
           onClick={onReportPost}
-          className="rounded-full border border-amber-300/60 px-3 py-1 text-sm font-semibold text-amber-200"
+          className="rounded-full border border-amber-200/60 px-3 py-1 text-sm font-semibold text-amber-100"
         >
           Report
         </button>
       </div>
 
       {commentsOpen && (
-        <section className="mt-4 space-y-3 rounded-xl border border-slate-700 bg-slate-900/40 p-3">
+        <section className="mt-4 space-y-3 rounded-xl border border-sky-200/25 bg-sky-100/8 p-3">
           {commentsLoading ? (
-            <p className="text-sm text-slate-300">Loading comments...</p>
+            <p className="text-sm text-sky-100/70">Loading comments...</p>
           ) : (
             <CommentsList
               comments={comments}

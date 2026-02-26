@@ -183,7 +183,7 @@ export default function AuthPage() {
 
       <section className="auth-grid">
         <article className="hero-panel auth-hero rounded-3xl p-8 md:p-10">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">Shipyard Auth</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-300">Shipyard Auth</p>
           <h1 className="mt-3 text-3xl font-bold md:text-5xl">Build your dev identity</h1>
           <p className="mt-4 text-slate-300">{message}</p>
 
@@ -216,7 +216,7 @@ export default function AuthPage() {
                   <div>
                     <p className="font-semibold text-emerald-100">{identity.name}</p>
                     <p className="text-sm text-emerald-200">{identity.email}</p>
-                    {identity.handle && <p className="text-sm text-cyan-200">@{identity.handle}</p>}
+                    {identity.handle && <p className="text-sm text-sky-200">@{identity.handle}</p>}
                   </div>
                 </div>
                 <p className="mt-3 inline-flex rounded-full border border-emerald-300/40 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-100">
@@ -241,7 +241,7 @@ export default function AuthPage() {
                     type="button"
                     onClick={() => setEmailMode("magic_link")}
                     className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] ${
-                      emailMode === "magic_link" ? "bg-cyan-400 text-slate-900" : "text-slate-300"
+                      emailMode === "magic_link" ? "bg-sky-400 text-slate-900" : "text-slate-300"
                     }`}
                   >
                     Magic Link
@@ -250,7 +250,7 @@ export default function AuthPage() {
                     type="button"
                     onClick={() => setEmailMode("password")}
                     className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] ${
-                      emailMode === "password" ? "bg-cyan-400 text-slate-900" : "text-slate-300"
+                      emailMode === "password" ? "bg-sky-400 text-slate-900" : "text-slate-300"
                     }`}
                   >
                     Password

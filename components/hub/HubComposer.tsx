@@ -16,7 +16,7 @@ export type ComposerPayload = {
 
 type HubComposerProps = {
   disabled?: boolean;
-  onSubmit: (payload: ComposerPayload) => Promise<void>;
+  onSubmit: (payload: ComposerPayload) => Promise<boolean>;
 };
 
 const projectStatuses: ProjectStatus[] = ["idea", "in_progress", "completed"];
@@ -52,7 +52,7 @@ export function HubComposer({ disabled, onSubmit }: HubComposerProps) {
 
     setError(null);
 
-    await onSubmit({
+    const submitSucceeded = await onSubmit({
       postType,
       title: trimmedTitle,
       description: trimmedDescription,
@@ -63,6 +63,10 @@ export function HubComposer({ disabled, onSubmit }: HubComposerProps) {
       repoUrl: repoUrl.trim() || null,
       demoUrl: demoUrl.trim() || null,
     });
+
+    if (!submitSucceeded) {
+      return;
+    }
 
     setTitle("");
     setDescription("");
@@ -77,15 +81,15 @@ export function HubComposer({ disabled, onSubmit }: HubComposerProps) {
 
   return (
     <section className="feature-card">
-      <h2 className="text-xl font-semibold">Create a post</h2>
-      <p className="mt-1 text-sm text-slate-300">Publish a project or idea to the community feed.</p>
+      <h2 className="text-xl font-semibold text-sky-50">Create a post</h2>
+      <p className="mt-1 text-sm text-sky-100/80">Publish a project or idea to the community feed.</p>
 
       <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-        <div className="inline-flex rounded-full border border-slate-600 bg-slate-900/70 p-1">
+        <div className="inline-flex rounded-full border border-sky-200/35 bg-sky-100/10 p-1">
           <button
             type="button"
             className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              postType === "project" ? "bg-cyan-400 text-slate-900" : "text-slate-300"
+              postType === "project" ? "bg-sky-100 text-sky-900" : "text-sky-100"
             }`}
             onClick={() => setPostType("project")}
           >
@@ -94,7 +98,7 @@ export function HubComposer({ disabled, onSubmit }: HubComposerProps) {
           <button
             type="button"
             className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              postType === "idea" ? "bg-cyan-400 text-slate-900" : "text-slate-300"
+              postType === "idea" ? "bg-sky-100 text-sky-900" : "text-sky-100"
             }`}
             onClick={() => setPostType("idea")}
           >
@@ -106,7 +110,7 @@ export function HubComposer({ disabled, onSubmit }: HubComposerProps) {
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder={postType === "project" ? "Project title" : "Idea title"}
-          className="w-full rounded-xl border border-slate-600 bg-slate-950/70 px-4 py-3 text-slate-100"
+          className="pastel-input"
           required
         />
 
@@ -115,7 +119,7 @@ export function HubComposer({ disabled, onSubmit }: HubComposerProps) {
           onChange={(event) => setDescription(event.target.value)}
           rows={4}
           placeholder={postType === "project" ? "What are you building?" : "Describe your idea"}
-          className="w-full rounded-xl border border-slate-600 bg-slate-950/70 px-4 py-3 text-slate-100"
+          className="pastel-textarea"
           required
         />
 
@@ -130,7 +134,7 @@ export function HubComposer({ disabled, onSubmit }: HubComposerProps) {
             <select
               value={status}
               onChange={(event) => setStatus(event.target.value as ProjectStatus)}
-              className="w-full rounded-xl border border-slate-600 bg-slate-950/70 px-4 py-3 text-slate-100"
+              className="pastel-select"
             >
               {projectStatuses.map((option) => (
                 <option key={option} value={option}>
@@ -142,20 +146,20 @@ export function HubComposer({ disabled, onSubmit }: HubComposerProps) {
               value={repoUrl}
               onChange={(event) => setRepoUrl(event.target.value)}
               placeholder="Repo URL"
-              className="w-full rounded-xl border border-slate-600 bg-slate-950/70 px-4 py-3 text-slate-100"
+              className="pastel-input"
             />
             <input
               value={demoUrl}
               onChange={(event) => setDemoUrl(event.target.value)}
               placeholder="Demo URL"
-              className="w-full rounded-xl border border-slate-600 bg-slate-950/70 px-4 py-3 text-slate-100"
+              className="pastel-input"
             />
           </>
         ) : (
           <select
             value={difficulty}
             onChange={(event) => setDifficulty(event.target.value as IdeaDifficulty)}
-            className="w-full rounded-xl border border-slate-600 bg-slate-950/70 px-4 py-3 text-slate-100"
+            className="pastel-select"
           >
             {ideaDifficulties.map((option) => (
               <option key={option} value={option}>
@@ -165,7 +169,7 @@ export function HubComposer({ disabled, onSubmit }: HubComposerProps) {
           </select>
         )}
 
-        <label className="flex items-center gap-2 text-sm text-slate-200">
+        <label className="flex items-center gap-2 text-sm text-sky-100">
           <input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} />
           Public post
         </label>

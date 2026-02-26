@@ -48,7 +48,7 @@ export function TechStackSelector({ label, selected, onChange }: TechStackSelect
               onClick={() => toggleOption(option.label)}
               className={`stack-option-btn ${active ? "stack-option-btn-active" : ""}`}
             >
-              <Image src={getTechIconUrl(option)} alt={`${option.label} logo`} width={16} height={16} />
+              <Image src={getTechIconUrl(option)} alt={`${option.label} logo`} width={16} height={16} unoptimized />
               {option.label}
             </button>
           );

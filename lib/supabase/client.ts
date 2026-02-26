@@ -90,6 +90,38 @@ export type ContentReportRow = {
   created_at: string;
 };
 
+export type OpenSourceCommitRow = {
+  id: string;
+  author_id: string;
+  repo_name: string;
+  repo_url: string | null;
+  commit_hash: string;
+  commit_url: string | null;
+  commit_message: string;
+  lines_added: number;
+  lines_deleted: number;
+  quality_score: number;
+  is_verified: boolean;
+  created_at: string;
+  sr_points: number;
+  author_handle: string | null;
+  author_display_name: string | null;
+  author_avatar_url: string | null;
+};
+
+export type OpenSourceLeaderboardRow = {
+  rank_position: number;
+  author_id: string;
+  author_handle: string | null;
+  author_display_name: string | null;
+  author_avatar_url: string | null;
+  total_sr: number;
+  commit_count: number;
+  avg_quality: number;
+  verified_commit_count: number;
+  last_commit_at: string;
+};
+
 export function getSupabaseEnv() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

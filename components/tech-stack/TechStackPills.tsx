@@ -17,7 +17,7 @@ export function TechStackPills({ stack }: TechStackPillsProps) {
 
         return (
           <span key={`${item}-${option?.id ?? "custom"}`} className="stack-pill">
-            {option && <Image src={getTechIconUrl(option)} alt={`${option.label} logo`} width={14} height={14} />}
+            {option && <Image src={getTechIconUrl(option)} alt={`${option.label} logo`} width={14} height={14} unoptimized />}
             {option?.label ?? item}
           </span>
         );

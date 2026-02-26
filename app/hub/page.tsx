@@ -67,6 +67,25 @@ export default function HubPage() {
   const [commentsByPostKey, setCommentsByPostKey] = useState<Record<string, HubComment[]>>({});
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [reportBusy, setReportBusy] = useState(false);
+  const feedStats = useMemo(() => {
+    const projects = feed.filter((item) => item.post_type === "project").length;
+    const ideas = feed.filter((item) => item.post_type === "idea").length;
+    const avgEngagement =
+      feed.length === 0
+        ? 0
+        : Number(
+            (
+              feed.reduce((sum, item) => sum + item.like_count + item.comment_count, 0) /
+              Math.max(feed.length, 1)
+            ).toFixed(1),
+          );
+    return {
+      projects,
+      ideas,
+      avgEngagement,
+      totalPosts: feed.length,
+    };
+  }, [feed]);
 
   const setKeyState = (
     setter: Dispatch<SetStateAction<Set<string>>>,
@@ -106,7 +125,7 @@ export default function HubPage() {
   }, [supabase]);
 
   const refreshFeed = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase) return false;
 
     setLoading(true);
 
@@ -119,12 +138,13 @@ export default function HubPage() {
     if (rpcError) {
       setError(rpcError.message);
       setLoading(false);
-      return;
+      return false;
     }
 
     setFeed(((data as Record<string, unknown>[]) ?? []).map(normalizeFeedItem));
     setError(null);
     setLoading(false);
+    return true;
   }, [sort, supabase]);
 
   useEffect(() => {
@@ -211,48 +231,49 @@ export default function HubPage() {
     );
   };
 
-  const handleComposerSubmit = async (payload: ComposerPayload) => {
-    if (!supabase || !ensureAuth() || !viewerId) return;
+  const handleComposerSubmit = async (payload: ComposerPayload): Promise<boolean> => {
+    if (!supabase || !ensureAuth() || !viewerId) return false;
 
     setComposerBusy(true);
     setError(null);
 
-    if (payload.postType === "project") {
-      const { error: insertError } = await supabase.from("projects").insert({
-        owner_id: viewerId,
-        title: payload.title,
-        description: payload.description,
-        tech_stack: payload.stack,
-        status: payload.status,
-        repo_url: payload.repoUrl,
-        demo_url: payload.demoUrl,
-        is_public: payload.isPublic,
-      });
+    try {
+      if (payload.postType === "project") {
+        const { error: insertError } = await supabase.from("projects").insert({
+          owner_id: viewerId,
+          title: payload.title,
+          description: payload.description,
+          tech_stack: payload.stack,
+          status: payload.status,
+          repo_url: payload.repoUrl,
+          demo_url: payload.demoUrl,
+          is_public: payload.isPublic,
+        });
 
-      if (insertError) {
-        setComposerBusy(false);
-        setError(insertError.message);
-        return;
-      }
-    } else {
-      const { error: insertError } = await supabase.from("ideas").insert({
-        owner_id: viewerId,
-        title: payload.title,
-        description: payload.description,
-        desired_stack: payload.stack,
-        difficulty: payload.difficulty,
-        is_public: payload.isPublic,
-      });
+        if (insertError) {
+          setError(insertError.message);
+          return false;
+        }
+      } else {
+        const { error: insertError } = await supabase.from("ideas").insert({
+          owner_id: viewerId,
+          title: payload.title,
+          description: payload.description,
+          desired_stack: payload.stack,
+          difficulty: payload.difficulty,
+          is_public: payload.isPublic,
+        });
 
-      if (insertError) {
-        setComposerBusy(false);
-        setError(insertError.message);
-        return;
+        if (insertError) {
+          setError(insertError.message);
+          return false;
+        }
       }
+
+      return await refreshFeed();
+    } finally {
+      setComposerBusy(false);
     }
-
-    await refreshFeed();
-    setComposerBusy(false);
   };
 
   const handleToggleLike = async (item: HubFeedItem) => {
@@ -367,56 +388,59 @@ export default function HubPage() {
     }
   };
 
-  const handleAddComment = async (item: HubFeedItem, body: string) => {
-    if (!supabase || !ensureAuth() || !viewerId) return;
+  const handleAddComment = async (item: HubFeedItem, body: string): Promise<boolean> => {
+    if (!supabase || !ensureAuth() || !viewerId) return false;
 
     const key = keyFor(item.post_type, item.id);
     setKeyState(setCommentBusyKeys, key, true);
 
-    const { data: inserted, error: insertError } = await supabase
-      .from("post_comments")
-      .insert({
-        post_type: item.post_type,
-        post_id: item.id,
-        author_id: viewerId,
-        body,
-      })
-      .select("id, author_id, body, created_at")
-      .single();
+    try {
+      const { data: inserted, error: insertError } = await supabase
+        .from("post_comments")
+        .insert({
+          post_type: item.post_type,
+          post_id: item.id,
+          author_id: viewerId,
+          body,
+        })
+        .select("id, author_id, body, created_at")
+        .single();
 
-    if (insertError || !inserted) {
-      setError(insertError?.message ?? "Could not post comment.");
+      if (insertError || !inserted) {
+        setError(insertError?.message ?? "Could not post comment.");
+        return false;
+      }
+
+      const comment: HubComment = {
+        id: inserted.id,
+        author_id: inserted.author_id,
+        body: inserted.body,
+        created_at: inserted.created_at,
+        author_handle: viewerProfile?.handle ?? null,
+        author_display_name: viewerProfile?.display_name ?? null,
+      };
+
+      setCommentsByPostKey((previous) => ({
+        ...previous,
+        [key]: [...(previous[key] ?? []), comment],
+      }));
+
+      updateFeedCounters(item.post_type, item.id, "comment_count", 1);
+      return true;
+    } finally {
       setKeyState(setCommentBusyKeys, key, false);
-      return;
     }
-
-    const comment: HubComment = {
-      id: inserted.id,
-      author_id: inserted.author_id,
-      body: inserted.body,
-      created_at: inserted.created_at,
-      author_handle: viewerProfile?.handle ?? null,
-      author_display_name: viewerProfile?.display_name ?? null,
-    };
-
-    setCommentsByPostKey((previous) => ({
-      ...previous,
-      [key]: [...(previous[key] ?? []), comment],
-    }));
-
-    updateFeedCounters(item.post_type, item.id, "comment_count", 1);
-    setKeyState(setCommentBusyKeys, key, false);
   };
 
-  const handleDeleteComment = async (item: HubFeedItem, commentId: string) => {
-    if (!supabase || !ensureAuth()) return;
+  const handleDeleteComment = async (item: HubFeedItem, commentId: string): Promise<boolean> => {
+    if (!supabase || !ensureAuth()) return false;
 
     const key = keyFor(item.post_type, item.id);
     const { error: deleteError } = await supabase.from("post_comments").delete().eq("id", commentId);
 
     if (deleteError) {
       setError(deleteError.message);
-      return;
+      return false;
     }
 
     setCommentsByPostKey((previous) => ({
@@ -424,28 +448,32 @@ export default function HubPage() {
       [key]: (previous[key] ?? []).filter((comment) => comment.id !== commentId),
     }));
     updateFeedCounters(item.post_type, item.id, "comment_count", -1);
+    return true;
   };
 
-  const handleSubmitReport = async (reason: string) => {
-    if (!supabase || !reportTarget || !ensureAuth() || !viewerId) return;
+  const handleSubmitReport = async (reason: string): Promise<boolean> => {
+    if (!supabase || !reportTarget || !ensureAuth() || !viewerId) return false;
 
     setReportBusy(true);
 
-    const { error: insertError } = await supabase.from("content_reports").insert({
-      target_type: reportTarget.targetType,
-      target_id: reportTarget.targetId,
-      reporter_id: viewerId,
-      reason,
-    });
+    try {
+      const { error: insertError } = await supabase.from("content_reports").insert({
+        target_type: reportTarget.targetType,
+        target_id: reportTarget.targetId,
+        reporter_id: viewerId,
+        reason,
+      });
 
-    if (insertError) {
-      setError(insertError.message);
+      if (insertError) {
+        setError(insertError.message);
+        return false;
+      }
+
+      setReportTarget(null);
+      return true;
+    } finally {
       setReportBusy(false);
-      return;
     }
-
-    setReportTarget(null);
-    setReportBusy(false);
   };
 
   return (
@@ -457,55 +485,76 @@ export default function HubPage() {
         <Link href="/projects" className="legacy-link">
           Project-only view
         </Link>
+        <Link href="/leaderboard" className="legacy-link">
+          Leaderboard
+        </Link>
         <Link href="/auth" className="legacy-link">
           Sign in
         </Link>
       </div>
 
       <section className="hero-panel rounded-3xl p-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-cyan-300">Shipyard Hub</p>
-        <h1 className="mt-2 text-3xl font-bold md:text-4xl">Projects + ideas social feed</h1>
-        <p className="mt-3 text-slate-300">
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-200">Shipyard Hub</p>
+        <h1 className="mt-2 text-3xl font-bold text-sky-50 md:text-4xl">Projects + ideas social feed</h1>
+        <p className="mt-3 text-sky-100/80">
           Publish builds and ideas, discuss in comments, and discover what students are shipping right now.
         </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+          <div className="mini-stat">
+            <p className="text-xs uppercase tracking-[0.14em] text-sky-200">Posts</p>
+            <p className="mt-1 text-xl font-bold text-sky-50">{feedStats.totalPosts}</p>
+          </div>
+          <div className="mini-stat">
+            <p className="text-xs uppercase tracking-[0.14em] text-sky-200">Projects</p>
+            <p className="mt-1 text-xl font-bold text-sky-50">{feedStats.projects}</p>
+          </div>
+          <div className="mini-stat">
+            <p className="text-xs uppercase tracking-[0.14em] text-sky-200">Ideas</p>
+            <p className="mt-1 text-xl font-bold text-sky-50">{feedStats.ideas}</p>
+          </div>
+          <div className="mini-stat">
+            <p className="text-xs uppercase tracking-[0.14em] text-sky-200">Avg Engagement</p>
+            <p className="mt-1 text-xl font-bold text-sky-50">{feedStats.avgEngagement}</p>
+          </div>
+        </div>
       </section>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <HubFeedTabs sort={sort} onChange={setSort} />
         {viewerProfile ? (
-          <div className="inline-flex items-center gap-2 rounded-full border border-slate-600 bg-slate-900/65 px-3 py-1.5">
+          <div className="inline-flex items-center gap-2 rounded-full border border-sky-200/35 bg-sky-100/10 px-3 py-1.5">
             {viewerProfile.avatar_url ? (
               <Image
                 src={viewerProfile.avatar_url}
                 alt="Viewer avatar"
                 width={28}
                 height={28}
-                className="h-7 w-7 rounded-full border border-cyan-300/40 object-cover"
+                className="h-7 w-7 rounded-full border border-sky-200/50 object-cover"
               />
             ) : (
-              <div className="flex h-7 w-7 items-center justify-center rounded-full border border-cyan-300/40 bg-slate-800 text-xs font-bold text-cyan-200">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full border border-sky-200/50 bg-sky-100/10 text-xs font-bold text-sky-100">
                 {viewerProfile.display_name?.[0]?.toUpperCase() ?? "U"}
               </div>
             )}
-            <p className="text-sm text-slate-200">
-              {viewerProfile.display_name} <span className="text-cyan-300">@{viewerProfile.handle}</span>
+            <p className="text-sm text-sky-50">
+              {viewerProfile.display_name} <span className="text-sky-200">@{viewerProfile.handle}</span>
             </p>
           </div>
         ) : (
-          <p className="text-sm text-slate-400">Sign in to post, like, and comment.</p>
+          <p className="text-sm text-sky-100/70">Sign in to post, like, and comment.</p>
         )}
       </div>
 
       <HubComposer disabled={composerBusy} onSubmit={handleComposerSubmit} />
 
-      {error && <p className="rounded-xl border border-rose-500/50 bg-rose-950/40 px-4 py-2 text-sm text-rose-200">{error}</p>}
-      {loading && <p className="text-slate-300">Loading hub feed...</p>}
+      {error && <p className="rounded-xl border border-rose-300/50 bg-rose-900/25 px-4 py-2 text-sm text-rose-100">{error}</p>}
+      {loading && <p className="text-sky-100/80">Loading hub feed...</p>}
 
       <section className="grid gap-4">
         {!loading && feed.length === 0 ? (
           <article className="feature-card">
-            <h2 className="text-xl font-semibold">No posts yet</h2>
-            <p className="mt-2 text-slate-300">Be the first to publish a project or idea.</p>
+            <h2 className="text-xl font-semibold text-sky-50">No posts yet</h2>
+            <p className="mt-2 text-sky-100/80">Be the first to publish a project or idea.</p>
           </article>
         ) : (
           feed.map((item) => {

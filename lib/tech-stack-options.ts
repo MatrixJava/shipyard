@@ -50,6 +50,10 @@ export function getTechOption(label: string): TechStackOption | undefined {
 }
 
 export function getTechIconUrl(option: TechStackOption) {
+  if (option.iconSlug === "microsoftazure") {
+    return "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/microsoftazure.svg";
+  }
+
   return option.iconColor
     ? `https://cdn.simpleicons.org/${option.iconSlug}/${option.iconColor}`
     : `https://cdn.simpleicons.org/${option.iconSlug}`;
